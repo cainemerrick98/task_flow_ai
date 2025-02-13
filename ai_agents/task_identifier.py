@@ -2,17 +2,17 @@
 this will use the mistral ai api to identify the task from the message model
 """
 from message_service.models import Message
-from mistralai import MistralAI
+from mistralai import Mistral
 import os
 import json
-from ai_agent.models import Task    
+from ai_agents.models import Task    
 
 class TaskIdentifier:
     def __init__(self):
-        self.mistral = MistralAI(api_key=os.getenv("MISTRAL_TOKEN"))
+        self.mistral = Mistral(api_key=os.getenv("MISTRAL_TOKEN"))
 
     def identify_task(self, message: Message) -> str:
-        return self.mistral.chat.completions.create(
+        return self.mistral.chat.complete(
             model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": """
@@ -84,17 +84,20 @@ class TaskIdentifier:
 
                  """
                  },
-                {"role": "user", "content": message.body}
+                {"role": "user", "content": str(message)}
             ]
-        )
+        ).choices[0].message.content
 
-    def parse_response(self, response: str) -> Task:    
+    def parse_response(self, response: str) -> Task:
         try:
+            if response.lower() == "none":
+                return None
             return Task(**json.loads(response))
         except json.JSONDecodeError:
+            print(f"Error parsing response: {response}")
             return None
 
-    def get_task(self, message: Message) -> dict:
+    def get_task(self, message: Message) -> Task|None:
         response = self.identify_task(message)
         return self.parse_response(response)
     
