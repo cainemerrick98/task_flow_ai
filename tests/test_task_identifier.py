@@ -1,13 +1,13 @@
-from ai_agents.task_identifier import TaskIdentifier
-from message_service.models import Message
-from ai_agents.models import Task
+from app.ai_agents.task_identifier import TaskIdentifier
+from app.message_service.models import Message
+from app.ai_agents.models import Task
 import unittest
 import json
 from unittest.mock import patch
 
 class TestTaskIdentifier(unittest.TestCase):
     
-    @patch('ai_agent.task_identifier.Mistral')
+    @patch('app.ai_agents.task_identifier.Mistral')
     def setUp(self, mock_mistral):
         self.task_identifier = TaskIdentifier()
         # Create a mock instance that will be returned by Mistral()

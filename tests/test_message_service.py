@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from message_service.gmail_service import GmailService
-from message_service.models import Message, Attachment
+from app.message_service.gmail_service import GmailService
+from app.message_service.models import Message, Attachment
 
 
 class TestGmailService(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestGmailService(unittest.TestCase):
             'client_secret': 'test_secret'
         }
         return super().setUp()
-    @patch('message_service.gmail_service.build')
+    @patch('app.message_service.gmail_service.build')
     def test_authenticate(self, mock_build):
         """
         Test that the authenticate method works correctly.
@@ -34,7 +34,7 @@ class TestGmailService(unittest.TestCase):
         # Test the authenticate method
         self.assertTrue(gmail_service.authenticate())
 
-    @patch('message_service.gmail_service.build')
+    @patch('app.message_service.gmail_service.build')
     def test_get_messages(self, mock_build):
         """
         Test retrieving messages without attachments.
@@ -75,7 +75,7 @@ class TestGmailService(unittest.TestCase):
         self.assertEqual(messages[0].subject, 'Test Subject')
         self.assertEqual(messages[0].sender, 'sender@example.com')
 
-    @patch('message_service.gmail_service.build')
+    @patch('app.message_service.gmail_service.build')
     def test_get_messages_with_attachments(self, mock_build):
         """
         Test retrieving messages with attachments.
@@ -123,7 +123,7 @@ class TestGmailService(unittest.TestCase):
         self.assertEqual(messages[0].attachments[0].filename, 'test.pdf')
         self.assertEqual(messages[0].attachments[0].mimeType, 'application/pdf')
 
-    @patch('message_service.gmail_service.build')
+    @patch('app.message_service.gmail_service.build')
     def test_get_messages_error_handling(self, mock_build):
         """
         Test error handling when retrieving messages fails.
@@ -140,7 +140,7 @@ class TestGmailService(unittest.TestCase):
         messages = gmail_service.get_messages()
         self.assertEqual(len(messages), 0)
 
-    @patch('message_service.gmail_service.build')
+    @patch('app.message_service.gmail_service.build')
     def test_get_messages_with_multiple_messages(self, mock_build):
         """
         Test retrieving multiple messages.

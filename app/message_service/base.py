@@ -1,4 +1,4 @@
-from message_service.models import Message
+from app.message_service.models import Message
 
 class BaseMessageService:
     """

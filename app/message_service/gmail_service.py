@@ -1,7 +1,7 @@
-from message_service.base import BaseMessageService
+from app.message_service.base import BaseMessageService
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from message_service.models import Message, Attachment
+from googleapiclient.discovery import build 
+from app.message_service.models import Message, Attachment
 
 
 class GmailService(BaseMessageService):

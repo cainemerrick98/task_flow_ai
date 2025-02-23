@@ -1,11 +1,11 @@
 """
 this will use the mistral ai api to identify the task from the message model
 """
-from message_service.models import Message
+from app.message_service.models import Message
 from mistralai import Mistral
 import os
 import json
-from ai_agents.models import Task    
+from app.ai_agents.models import Task    
 
 class TaskIdentifier:
     def __init__(self):
