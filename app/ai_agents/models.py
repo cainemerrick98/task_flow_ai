@@ -1,8 +1,10 @@
 from pydantic import BaseModel
+from datetime import date
+from typing import Optional
 
 class Task(BaseModel):
     task: str
-    due_date: str | None
+    due_date: Optional[date] = None
     description: str
 
     def __str__(self):

@@ -5,20 +5,23 @@ from app.message_service.models import Message
 from mistralai import Mistral
 import os
 import json
-from app.ai_agents.models import Task    
+from app.ai_agents.models import Task       
+from datetime import datetime
 
 class TaskIdentifier:
     def __init__(self):
         self.mistral = Mistral(api_key=os.getenv("MISTRAL_TOKEN"))
 
     def identify_task(self, message: Message) -> str:
+        print(f"Identifying task for message: {message}")
         return self.mistral.chat.complete(
             model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": """
                  
                  You will be given a message from the users work email or slack and you need to identify if the message contains a task and if so return the task in a json format.
-                 
+                 Remember this is for work so the task should be something that is work related.
+
                  The json should have the following fields:
                  - task: a short title for the task
                  - due_date: the due date of the task - this should be in the format YYYY-MM-DD - if no due date is found return None
@@ -82,6 +85,8 @@ class TaskIdentifier:
                  Expected Response:
                  None
 
+                 Todays date is {datetime.now().strftime("%Y-%m-%d")} - this is important to know for the due date 
+
                  """
                  },
                 {"role": "user", "content": str(message)}
@@ -89,10 +94,27 @@ class TaskIdentifier:
         ).choices[0].message.content
 
     def parse_response(self, response: str) -> Task:
+        print(f"Parsing response: {response}")
         try:
-            if response.lower() == "none":
+            # If response explicitly indicates no task
+            if response.lower().strip() in ["none", "none.", "```json\nnone\n```"]:
                 return None
-            return Task(**json.loads(response))
+            
+            # Clean up the response by removing markdown code blocks if present
+            cleaned_response = response
+            if "```json" in cleaned_response:
+                cleaned_response = cleaned_response.split("```json")[-1]
+                cleaned_response = cleaned_response.split("```")[0]
+            
+            # Remove any "Based on the provided message" prefix text
+            if "based on" in cleaned_response.lower():
+                return None
+            
+            # Strip whitespace and parse JSON
+            cleaned_response = cleaned_response.strip()
+            print(f"Cleaned response: {cleaned_response}")
+            return Task(**json.loads(cleaned_response))
+        
         except json.JSONDecodeError:
             print(f"Error parsing response: {response}")
             return None

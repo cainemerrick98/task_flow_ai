@@ -5,15 +5,14 @@ from app.message_service.models import Message, Attachment
 
 
 class GmailService(BaseMessageService):
-    def __init__(self, credentials_dict):
+    def __init__(self, credentials):
         """
         Initialize Gmail service with OAuth2 credentials
         
         Args:
-            credentials_dict (dict): Dictionary containing OAuth2 credentials with keys:
-                token, refresh_token, token_uri, client_id, client_secret
+            credentials: Google OAuth2 Credentials object
         """
-        self.credentials_dict = credentials_dict
+        self.credentials = credentials
         self.service = None
         self.authenticate()
     
@@ -25,8 +24,7 @@ class GmailService(BaseMessageService):
             bool: True if authentication successful, False otherwise
         """
         try:
-            credentials = Credentials.from_authorized_user_info(self.credentials_dict)
-            self.service = build('gmail', 'v1', credentials=credentials)
+            self.service = build('gmail', 'v1', credentials=self.credentials)
             # Test the connection
             self.service.users().getProfile(userId='me').execute()
             return True
@@ -57,11 +55,19 @@ class GmailService(BaseMessageService):
                 q='is:unread'  # Only get unread messages
             ).execute()
             messages = []
+            # Only get messages from inbox by excluding social and promotions labels
             for msg in results.get('messages', []):
                 message = self.service.users().messages().get(
-                    userId='me',
-                    id=msg['id']
+                    userId='me', 
+                    id=msg['id'],
                 ).execute()
+                
+                # Skip messages with social/promotions labels
+                labels = message.get('labelIds', [])
+                print(f"Labels: {labels}")
+                if 'CATEGORY_SOCIAL' in labels or 'CATEGORY_PROMOTIONS' in labels:
+                    continue
+
                 
                 headers = message['payload']['headers']
                 subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
