@@ -43,6 +43,18 @@ class GmailCredentials(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     encrypted_token = Column(String, nullable=False)
     encrypted_refresh_token = Column(String, nullable=True)
+    token_expiry = Column(DateTime, nullable=True) 
+
+    @property
+    def is_expired(self):
+        return self.token_expiry and self.token_expiry < datetime.now()
+    
+    def update_token(self, token, refresh_token=None, expiry=None):
+        self.encrypted_token = encrypt_token(token)
+        if refresh_token:
+            self.encrypted_refresh_token = encrypt_token(refresh_token)
+        if expiry:
+            self.token_expiry = expiry
 
     @property
     def token(self):
@@ -54,11 +66,11 @@ class GmailCredentials(Base):
 
     @token.setter
     def token(self, value):
-        self.encrypted_token = encrypt_token(value)
+        self.encrypted_token = encrypt_token(value) if value else None
 
     @refresh_token.setter
     def refresh_token(self, value):
-        self.encrypted_refresh_token = encrypt_token(value)
+        self.encrypted_refresh_token = encrypt_token(value) if value else None  
 
 class Task(Base):
     __tablename__ = "tasks"
