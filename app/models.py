@@ -44,6 +44,7 @@ class GmailCredentials(Base):
     encrypted_token = Column(String, nullable=False)
     encrypted_refresh_token = Column(String, nullable=True)
     token_expiry = Column(DateTime, nullable=True) 
+    
 
     @property
     def is_expired(self):
