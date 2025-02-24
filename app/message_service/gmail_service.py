@@ -65,7 +65,7 @@ class GmailService(BaseMessageService):
                 # Skip messages with social/promotions labels
                 labels = message.get('labelIds', [])
                 print(f"Labels: {labels}")
-                if 'CATEGORY_SOCIAL' in labels or 'CATEGORY_PROMOTIONS' in labels:
+                if 'CATEGORY_SOCIAL' in labels or 'CATEGORY_PROMOTIONS' in labels or 'UNREAD' not in labels:
                     continue
 
                 
