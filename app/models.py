@@ -3,6 +3,18 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from sqlalchemy.orm import relationship
+from cryptography.fernet import Fernet
+from app.config import settings
+
+
+cipher = Fernet(settings.FERNET_KEY)
+
+def encrypt_token(token):
+    return cipher.encrypt(token.encode()).decode()
+
+def decrypt_token(encrypted_token):
+    return cipher.decrypt(encrypted_token.encode()).decode()
+
 
 Base = declarative_base()
 
@@ -15,13 +27,38 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-
+    is_google_authenticated = Column(Boolean, default=False)
+    is_outlook_authenticated = Column(Boolean, default=False)
+    is_slack_authenticated = Column(Boolean, default=False)
     tasks = relationship("Task", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', is_active={self.is_active})>"
+    
+class GmailCredentials(Base):
+    __tablename__ = "gmail_credentials"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    encrypted_token = Column(String, nullable=False)
+    encrypted_refresh_token = Column(String, nullable=True)
+
+    @property
+    def token(self):
+        return decrypt_token(self.encrypted_token) if self.encrypted_token else None
+    
+    @property
+    def refresh_token(self):
+        return decrypt_token(self.encrypted_refresh_token) if self.encrypted_refresh_token else None
+
+    @token.setter
+    def token(self, value):
+        self.encrypted_token = encrypt_token(value)
+
+    @refresh_token.setter
+    def refresh_token(self, value):
+        self.encrypted_refresh_token = encrypt_token(value)
 
 class Task(Base):
     __tablename__ = "tasks"

@@ -3,7 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone
-from app.models import Base, User, Task
+from app.models import Base, User, Task, GmailCredentials
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 
@@ -27,20 +27,21 @@ class TestModels(unittest.TestCase):
 
     def test_create_user(self):
         user = User(
-            email="test@example.com",
-            hashed_password="hashedpass123"
+            email="test@example.com"
         )
         self.db.add(user)
         self.db.commit()
         
         saved_user = self.db.query(User).first()
         self.assertEqual(saved_user.email, "test@example.com")
-        self.assertEqual(saved_user.hashed_password, "hashedpass123")
         self.assertTrue(saved_user.is_active)
+        self.assertFalse(saved_user.is_google_authenticated)
+        self.assertFalse(saved_user.is_outlook_authenticated)
+        self.assertFalse(saved_user.is_slack_authenticated)
 
     def test_create_task(self):
         # First create a user
-        user = User(email="test@example.com", hashed_password="hashedpass123")
+        user = User(email="test@example.com")
         self.db.add(user)
         self.db.commit()
         
@@ -64,7 +65,7 @@ class TestModels(unittest.TestCase):
         self.assertIsInstance(saved_task.updated_at, datetime)
 
     def test_task_user_relationship(self):
-        user = User(email="test@example.com", hashed_password="hashedpass123")
+        user = User(email="test@example.com")
         self.db.add(user)
         self.db.commit()
         
@@ -81,6 +82,37 @@ class TestModels(unittest.TestCase):
             title="Invalid Task"
         )
         self.db.add(invalid_task)
+        
+        with self.assertRaises(IntegrityError):
+            self.db.commit()
+
+    def test_gmail_credentials(self):
+        # Create a user first
+        user = User(email="test@example.com")
+        self.db.add(user)
+        self.db.commit()
+
+        # Test creating Gmail credentials
+        credentials = GmailCredentials(
+            user_id=user.id,
+            token="test_token",
+            refresh_token="test_refresh_token"
+        )
+        self.db.add(credentials)
+        self.db.commit()
+
+        # Test token encryption/decryption
+        saved_credentials = self.db.query(GmailCredentials).first()
+        self.assertNotEqual(saved_credentials.encrypted_token, "test_token")  # Should be encrypted
+        self.assertEqual(saved_credentials.token, "test_token")  # Should be decrypted
+        self.assertEqual(saved_credentials.refresh_token, "test_refresh_token")
+
+        # Test foreign key constraint
+        invalid_credentials = GmailCredentials(
+            user_id=999,  # Non-existent user_id
+            token="test_token"
+        )
+        self.db.add(invalid_credentials)
         
         with self.assertRaises(IntegrityError):
             self.db.commit()
