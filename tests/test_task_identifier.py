@@ -18,7 +18,7 @@ class TestTaskIdentifier(unittest.TestCase):
     def test_identify_task_with_due_date(self):
         # Mock the API response
         mock_response = {
-            "task": "Update Website Pricing Page",
+            "title": "Update Website Pricing Page",
             "due_date": "2024-01-19",
             "description": "Update pricing page to include new enterprise tier pricing"
         }
@@ -44,7 +44,7 @@ class TestTaskIdentifier(unittest.TestCase):
         task = self.task_identifier.get_task(message)
         
         self.assertIsInstance(task, Task)
-        self.assertEqual(task.task, "Update Website Pricing Page")
+        self.assertEqual(task.title, "Update Website Pricing Page")
         self.assertEqual(task.due_date, "2024-01-19")
         self.assertEqual(task.description, "Update pricing page to include new enterprise tier pricing")
 
@@ -83,13 +83,13 @@ class TestTaskIdentifier(unittest.TestCase):
 
     def test_parse_response_with_valid_json(self):
         valid_response = {
-            "task": "Update Website Pricing Page",
+            "title": "Update Website Pricing Page",
             "due_date": "2024-01-19",
             "description": "Update pricing page to include new enterprise tier pricing"
         }
         result = self.task_identifier.parse_response(json.dumps(valid_response))
         self.assertIsInstance(result, Task)
-        self.assertEqual(result.task, "Update Website Pricing Page")
+        self.assertEqual(result.title, "Update Website Pricing Page")
         self.assertEqual(result.due_date, "2024-01-19")
         self.assertEqual(result.description, "Update pricing page to include new enterprise tier pricing")  
 

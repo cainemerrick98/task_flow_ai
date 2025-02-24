@@ -38,7 +38,7 @@ class TaskIdentifier:
                  
                  Expected Response:
                  {
-                     "task": "Update Website Pricing Page",
+                     "title": "Update Website Pricing Page",
                      "due_date": "2024-01-19",
                      "description": "Update pricing page to include new enterprise tier pricing and feature comparison updates"
                  }
@@ -50,7 +50,7 @@ class TaskIdentifier:
                  
                  Expected Response:
                  {
-                     "task": "Review Q4 Financial Report",
+                     "title": "Review Q4 Financial Report",
                      "due_date": "2024-01-25", 
                      "description": "Review Q4 financial report draft with focus on revenue projections section"
                  }
@@ -62,7 +62,7 @@ class TaskIdentifier:
                  
                  Expected Response:
                  {
-                     "task": "Prepare Client Presentation",
+                    "title": "Prepare Client Presentation",
                      "due_date": None,
                      "description": "Create presentation slides for client and submit for internal review"
                  }
