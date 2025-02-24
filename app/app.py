@@ -85,7 +85,7 @@ async def callback(request: Request, db: Session = Depends(get_db)):
 
         user = db.query(User).filter(User.email == user_email).first()
         if not user:
-            user = User(email=user_email, is_active=True, is_gmail_authenticated=True)        
+            user = User(email=user_email, is_active=True, is_google_authenticated=True)        
             db.add(user)
             db.commit()
 
@@ -108,46 +108,73 @@ async def callback(request: Request, db: Session = Depends(get_db)):
 async def success():
     return {"message": "Successfully authenticated with Gmail"}
 
-def poll_gmail(user: User) -> List[Message]:
+def poll_gmail(credentials: GmailCredentials, db: Session) -> List[Message]:
     """
     Poll Gmail for new messages and return a list of tasks
     """
-    credentials = GmailCredentials.get_credentials(user.id)
     if credentials and credentials.is_expired:
-        credentials.refresh()
-    
-    gmail_service = GmailService(credentials)
+        credentials.update_token()
+        db.add(credentials)
+        db.commit()
+    logger.info(f"Credentials: {credentials}")
+
+    gmail_service = GmailService(credentials.get_credentials())
     messages = gmail_service.get_messages(limit=50)
     task_identifier = TaskIdentifier()
     tasks = []
     for message in messages:
+        logger.info(f"Message: {message}")
         task = task_identifier.get_task(message)
         if task:
             tasks.append(task)
     return tasks
 
 def poll_userbase():
-    with get_db() as db:
-        print("Polling userbase")
+    logger.info("Polling userbase")
+    db = next(get_db())
+    try:
         users = db.query(User).all()
-        print(users)
+        logger.info(f"Found {len(users)} users")
         for user in users:
-            print(user)
-            if user.is_active and user.is_gmail_authenticated:
-                tasks = poll_gmail(user)
+            logger.info(f"User: {user}")
+            if user.is_active and user.is_google_authenticated:
+                credentials = db.query(GmailCredentials).filter(GmailCredentials.user_id == user.id).first()
+                tasks = poll_gmail(credentials, db)
                 for task in tasks:
-                    print(task)
-                    task.user_id = user.id
-                    db.add(Task(**task))
+                    logger.info(f"Task: {task}")
+                    db.add(Task(title=task.title, due_date=task.due_date, description=task.description, user_id=user.id))
                 db.commit()
-    print("Done polling userbase")
+    except Exception as e:
+        logger.error(f"Error in polling userbase: {e}")
+    finally:
+        db.close()
+    logger.info("Done polling userbase")
 
 if __name__ == "__main__":
+    import threading
+    import time
 
-    schedule.every(10).seconds.do(poll_userbase)
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    def run_polling():
+        thread_name = threading.current_thread().name
+        logger.info(f"Starting polling thread: {thread_name}")  # Added logging
+        while True:
+            try:
+                poll_userbase()
+            except Exception as e:
+                logger.error(f"Error in polling thread: {e}")  # Added error logging
+            time.sleep(10)
 
-    from app.models import create_database
+    polling_thread = threading.Thread(target=run_polling, name="PollingThread", daemon=True)
+    polling_thread.start()
+
     create_database()
     import uvicorn
-    uvicorn.run('app.app:app', host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run('app.app:app', host="127.0.0.1", port=8000, reload=False)  # Disabled reload
+
     

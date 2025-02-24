@@ -8,7 +8,7 @@ class Task(BaseModel):
     description: str
 
     def __str__(self):
-        return f"Task: {self.task}\nDue Date: {self.due_date}\nDescription: {self.description}"
+        return f"Task: Title: {self.title}\nDue Date: {self.due_date}\nDescription: {self.description}"
 
     def __repr__(self):
         return self.__str__()

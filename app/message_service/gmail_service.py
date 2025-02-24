@@ -2,10 +2,11 @@ from app.message_service.base import BaseMessageService
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build 
 from app.message_service.models import Message, Attachment
+from googleapiclient.errors import HttpError
 
 
 class GmailService(BaseMessageService):
-    def __init__(self, credentials):
+    def __init__(self, credentials: Credentials):
         """
         Initialize Gmail service with OAuth2 credentials
         
@@ -24,12 +25,21 @@ class GmailService(BaseMessageService):
             bool: True if authentication successful, False otherwise
         """
         try:
+            print("Creating Gmail service...")
             self.service = build('gmail', 'v1', credentials=self.credentials)
-            # Test the connection
-            self.service.users().getProfile(userId='me').execute()
+            
+            print("Testing connection with getProfile...")
+            profile = self.service.users().getProfile(userId='me').execute()
+            print(f"Successfully connected to Gmail for: {profile.get('emailAddress')}")
             return True
+            
+        except HttpError as e:
+            print(f"Gmail API HTTP error: {e.resp.status} - {e.content}")
+            self.service = None
+            return False
         except Exception as e:
-            print(f"Authentication failed: {str(e)}")
+            print(f"Authentication failed with unexpected error: {str(e)}")
+            print(f"Error type: {type(e)}")
             self.service = None
             return False
     
@@ -64,40 +74,46 @@ class GmailService(BaseMessageService):
                 
                 # Skip messages with social/promotions labels
                 labels = message.get('labelIds', [])
-                print(f"Labels: {labels}")
-                if 'CATEGORY_SOCIAL' in labels or 'CATEGORY_PROMOTIONS' in labels or 'UNREAD' not in labels:
-                    continue
-
-                
-                headers = message['payload']['headers']
-                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
-                sender = next((h['value'] for h in headers if h['name'] == 'From'), '')
-                
-                # Handle attachments
-                attachments = []
-                if 'parts' in message['payload']:
-                    parts = message['payload']['parts']
-                    for part in parts:
-                        if part.get('filename'):
-                            attachment_id = part['body'].get('attachmentId')
-                            if attachment_id:
-                                attachment = self.service.users().messages().attachments().get(
-                                    userId='me',
-                                    messageId=msg['id'],
-                                    id=attachment_id
-                                ).execute()
-                                attachments.append({
-                                    'filename': part['filename'],
-                                    'mimeType': part['mimeType'],
-                                    'data': attachment['data']
-                                })
-                messages.append(Message(
-                    id=msg['id'],
-                    subject=subject,
-                    sender=sender,
-                    body=message['snippet'],
-                    attachments=[Attachment(**attachment) for attachment in attachments]
-                ))
+                if 'UNREAD' in labels and 'INBOX' in labels and 'CATEGORY_SOCIAL' not in labels and 'CATEGORY_PROMOTIONS' not in labels:
+                    print(labels)
+                    headers = message['payload']['headers']
+                    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
+                    sender = next((h['value'] for h in headers if h['name'] == 'From'), '')
+                    
+                    # Handle attachments
+                    attachments = []
+                    if 'parts' in message['payload']:
+                        parts = message['payload']['parts']
+                        for part in parts:
+                            if part.get('filename'):
+                                attachment_id = part['body'].get('attachmentId')
+                                if attachment_id:
+                                    attachment = self.service.users().messages().attachments().get(
+                                        userId='me',
+                                        messageId=msg['id'],
+                                        id=attachment_id
+                                    ).execute()
+                                    attachments.append({
+                                        'filename': part['filename'],
+                                        'mimeType': part['mimeType'],
+                                        'data': attachment['data']
+                                    })
+                    messages.append(Message(
+                        id=msg['id'],
+                        subject=subject,
+                        sender=sender,
+                        body=message['snippet'],
+                        attachments=[Attachment(**attachment) for attachment in attachments]
+                    ))
+                    
+                    #TODO: Mark message as read
+                    #Need to add scope to credentials to modify messages
+                    
+                    # self.service.users().messages().modify(
+                    #     userId='me',
+                    #     id=msg['id'],
+                    #     body={'removeLabelIds': ['UNREAD']}
+                    # ).execute()
             return messages
         
         except Exception as e:

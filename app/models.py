@@ -5,7 +5,8 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from cryptography.fernet import Fernet
 from app.config import settings
-
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 cipher = Fernet(settings.FERNET_KEY)
 
@@ -45,17 +46,26 @@ class GmailCredentials(Base):
     encrypted_refresh_token = Column(String, nullable=True)
     token_expiry = Column(DateTime, nullable=True) 
     
+    def __repr__(self):
+        return f"<GmailCredentials(id={self.id}, token_expiry={self.token_expiry})>"
 
     @property
     def is_expired(self):
         return self.token_expiry and self.token_expiry < datetime.now()
     
-    def update_token(self, token, refresh_token=None, expiry=None):
-        self.encrypted_token = encrypt_token(token)
-        if refresh_token:
-            self.encrypted_refresh_token = encrypt_token(refresh_token)
-        if expiry:
-            self.token_expiry = expiry
+    def update_token(self):
+        credentials = Credentials(
+            token=self.token,
+            refresh_token=self.refresh_token,
+            token_uri=settings.GOOGLE_TOKEN_URL,
+            client_id=settings.GOOGLE_CLIENT_ID,
+            client_secret=settings.GOOGLE_CLIENT_SECRET
+        )
+        credentials.refresh(Request())
+        
+        self.token = encrypt_token(credentials.token)
+        self.refresh_token = encrypt_token(credentials.refresh_token)
+        self.token_expiry = credentials.expiry
 
     @property
     def token(self):
@@ -64,7 +74,18 @@ class GmailCredentials(Base):
     @property
     def refresh_token(self):
         return decrypt_token(self.encrypted_refresh_token) if self.encrypted_refresh_token else None
+    
 
+    def get_credentials(self):
+        credentials = Credentials(
+            token=self.token,
+            refresh_token=self.refresh_token,
+            token_uri=settings.GOOGLE_TOKEN_URL,
+            client_id=settings.GOOGLE_CLIENT_ID,
+            client_secret=settings.GOOGLE_CLIENT_SECRET,
+            scopes=settings.GOOGLE_SCOPES
+        )   
+        return credentials
     @token.setter
     def token(self, value):
         self.encrypted_token = encrypt_token(value) if value else None
