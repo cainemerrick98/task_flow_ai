@@ -1,18 +1,13 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from google.auth.credentials import Credentials
 from app.message_service.gmail_service import GmailService
 from app.message_service.models import Message, Attachment
 
 
 class TestGmailService(unittest.TestCase):
     def setUp(self) -> None:
-        self.test_credentials = {
-            'token': 'test_token',
-            'refresh_token': 'test_refresh',
-            'token_uri': 'test_uri',
-            'client_id': 'test_id',
-            'client_secret': 'test_secret'
-        }
+        self.test_credentials = MagicMock(spec=Credentials)
         return super().setUp()
     @patch('app.message_service.gmail_service.build')
     def test_authenticate(self, mock_build):
@@ -53,6 +48,7 @@ class TestGmailService(unittest.TestCase):
         }
         mock_message_detail = {
             'id': '123',
+            'labelIds': ['INBOX', 'UNREAD'],
             'payload': {
                 'headers': [
                     {'name': 'Subject', 'value': 'Test Subject'},
@@ -94,6 +90,7 @@ class TestGmailService(unittest.TestCase):
         # Mock the Gmail API response with attachments
         mock_message_detail = {
             'id': '123',
+            'labelIds': ['INBOX', 'UNREAD'],
             'payload': {
                 'headers': [
                     {'name': 'Subject', 'value': 'Test Subject'},
@@ -117,6 +114,7 @@ class TestGmailService(unittest.TestCase):
 
         gmail_service = GmailService(self.test_credentials)
         messages = gmail_service.get_messages()
+        print(messages)
 
         # Test attachment specific attributes
         self.assertEqual(len(messages[0].attachments), 1)
@@ -159,6 +157,7 @@ class TestGmailService(unittest.TestCase):
         }
         mock_message_detail = {
             'id': '123',
+            'labelIds': ['INBOX', 'UNREAD'],
             'payload': {
                 'headers': [
                     {'name': 'Subject', 'value': 'Test Subject 1'},
@@ -170,6 +169,7 @@ class TestGmailService(unittest.TestCase):
         }
         mock_message_detail_2 = {
             'id': '456',
+            'labelIds': ['INBOX', 'UNREAD'],
             'payload': {
                 'headers': [
                     {'name': 'Subject', 'value': 'Test Subject 2'}, 
