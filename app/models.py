@@ -63,8 +63,8 @@ class GmailCredentials(Base):
         )
         credentials.refresh(Request())
         
-        self.token = encrypt_token(credentials.token)
-        self.refresh_token = encrypt_token(credentials.refresh_token)
+        self.encrypted_token = encrypt_token(credentials.token)
+        self.encrypted_refresh_token = encrypt_token(credentials.refresh_token)
         self.token_expiry = credentials.expiry
 
     @property
