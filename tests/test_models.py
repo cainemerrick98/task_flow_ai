@@ -27,7 +27,8 @@ class TestModels(unittest.TestCase):
 
     def test_create_user(self):
         user = User(
-            email="test@example.com"
+            email="test@example.com",
+            password="test_password"
         )
         self.db.add(user)
         self.db.commit()
@@ -41,7 +42,7 @@ class TestModels(unittest.TestCase):
 
     def test_create_task(self):
         # First create a user
-        user = User(email="test@example.com")
+        user = User(email="test@example.com", password="test_password")
         self.db.add(user)
         self.db.commit()
         
@@ -65,7 +66,7 @@ class TestModels(unittest.TestCase):
         self.assertIsInstance(saved_task.updated_at, datetime)
 
     def test_task_user_relationship(self):
-        user = User(email="test@example.com")
+        user = User(email="test@example.com", password="test_password")
         self.db.add(user)
         self.db.commit()
         
@@ -88,7 +89,7 @@ class TestModels(unittest.TestCase):
 
     def test_gmail_credentials(self):
         # Create a user first
-        user = User(email="test@example.com")
+        user = User(email="test@example.com", password="test_password")
         self.db.add(user)
         self.db.commit()
 

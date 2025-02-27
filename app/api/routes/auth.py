@@ -1,67 +1,47 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-import jwt
 import logging
-from datetime import datetime
-
-from app.models import User, GmailCredentials, get_db
-from app.auth.google import create_auth_flow, get_flow_and_credentials
+from app.models import User, get_db
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-@router.get("/auth/login")
-async def login():    
-    flow = create_auth_flow()
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'
+
+@router.post('/login')
+async def login(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    email = data.get('email')
+    password = data.get('password') 
+    print(f"email: {email}, password: {password}")
+    print(f"db type: {type(db)}")
+    print(f"db query type: {type(db.query)}")
+    user = db.query(User).filter(User.email == email).first()
+    print(f"user: {user}")
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.password == password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Successfully logged in", 
+            "user": {
+                "id": user.id, 
+                "email": user.email
+            }
+        }
     )
-    return RedirectResponse(authorization_url)
 
-@router.get("/auth/callback")
-async def callback(request: Request, db: Session = Depends(get_db)):
-    try:
-        flow, credentials = get_flow_and_credentials(request)
-        
-        # Extract user email from token
-        if credentials.id_token:
-            try:
-                decoded_token = jwt.decode(credentials.id_token, options={"verify_signature": False})
-                user_email = decoded_token.get("email")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Failed to decode id_token: {str(e)}")
-        else:
-            raise HTTPException(status_code=400, detail="id_token not found in credentials")
 
-        if not user_email:
-            raise HTTPException(status_code=400, detail="User email not found in token")
+@router.post('/register')
+async def register(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    email = data.get('email')
+    password = data.get('password')
+    user = User(email=email, password=password)
+    db.add(user)
+    db.commit()
+    return JSONResponse(status_code=200, content={"message": "Successfully registered"})
 
-        # Create or update user
-        user = db.query(User).filter(User.email == user_email).first()
-        if not user:
-            user = User(email=user_email, is_active=True, is_google_authenticated=True)
-            db.add(user)
-            db.commit()
-
-        # Store credentials
-        db.add(
-            GmailCredentials(
-                user_id=user.id, 
-                token=credentials.token, 
-                refresh_token=credentials.refresh_token, 
-                token_expiry=datetime.fromtimestamp(credentials.expiry.timestamp())
-            ))
-        db.commit()
-        
-        return RedirectResponse(url="/auth/success")
-
-    except Exception as e:
-        logger.error(f"Auth callback error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
-
-@router.get("/auth/success")
-async def success():
-    return {"message": "Successfully authenticated with Gmail"} 

@@ -10,11 +10,17 @@ from google.auth.transport.requests import Request
 
 cipher = Fernet(settings.FERNET_KEY)
 
-def encrypt_token(token):
+def encrypt_token(token:str):
     return cipher.encrypt(token.encode()).decode()
 
-def decrypt_token(encrypted_token):
+def decrypt_token(encrypted_token:str):
     return cipher.decrypt(encrypted_token.encode()).decode()
+
+def encrypt_password(password:str):
+    return cipher.encrypt(password.encode()).decode()
+
+def decrypt_password(encrypted_password:str):
+    return cipher.decrypt(encrypted_password.encode()).decode()
 
 
 Base = declarative_base()
@@ -28,6 +34,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String, unique=True, nullable=False)
+    _password = Column('password', String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_google_authenticated = Column(Boolean, default=False)
     is_outlook_authenticated = Column(Boolean, default=False)
@@ -36,6 +43,17 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', is_active={self.is_active})>"
+    
+    @property
+    def password(self):
+        return decrypt_password(self._password)
+
+
+    @password.setter
+    def password(self, value):
+        self._password = encrypt_password(value)
+    
+    
     
 class GmailCredentials(Base):
     __tablename__ = "gmail_credentials"
@@ -48,6 +66,9 @@ class GmailCredentials(Base):
     
     def __repr__(self):
         return f"<GmailCredentials(id={self.id}, token_expiry={self.token_expiry})>"
+    
+    def password_setter(self, value):
+        self.password = encrypt_password(value)
 
     @property
     def is_expired(self):
@@ -86,6 +107,7 @@ class GmailCredentials(Base):
             scopes=settings.GOOGLE_SCOPES
         )   
         return credentials
+    
     @token.setter
     def token(self, value):
         self.encrypted_token = encrypt_token(value) if value else None
