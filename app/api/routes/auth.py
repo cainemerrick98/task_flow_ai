@@ -43,5 +43,21 @@ async def register(request: Request, db: Session = Depends(get_db)):
     user = User(email=email, password=password)
     db.add(user)
     db.commit()
-    return JSONResponse(status_code=200, content={"message": "Successfully registered"})
+    return JSONResponse(status_code=200, content={"message": "Successfully registered", "user": {"id": user.id, "email": user.email}})
+
+@router.get('/user')
+async def get_user(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    user_id = data.get('user_id')
+    user = db.query(User).filter(User.id == user_id).first()
+    return JSONResponse(status_code=200, content={
+        "user": {
+            "id": user.id, 
+            "email": user.email, 
+            "is_google_authenticated": user.is_google_authenticated, 
+            "is_outlook_authenticated": user.is_outlook_authenticated, 
+            "is_slack_authenticated": user.is_slack_authenticated
+            }
+        }
+    )
 
