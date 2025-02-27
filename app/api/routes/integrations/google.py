@@ -40,7 +40,7 @@ def get_flow_and_credentials(request: Request):
     return flow, flow.credentials 
 
 
-@router.get("/google/integrate")
+@router.get("/integrations/google/integrate")
 async def login():    
     flow = create_auth_flow()
     authorization_url, state = flow.authorization_url(
@@ -52,7 +52,7 @@ async def login():
 
 
 
-@router.get("/google/callback")
+@router.get("/integrations/google/callback")
 async def callback(request: Request, db: Session = Depends(get_db)):
     try:
         flow, credentials = get_flow_and_credentials(request)

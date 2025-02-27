@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 import logging
 import uvicorn
@@ -22,12 +23,22 @@ app.include_router(auth.router, tags=["auth"])
 app.include_router(integrations.google_router, tags=["integrations"])
 app.include_router(tasks.router, tags=["tasks"])
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 if __name__ == "__main__":
     # Create database
     create_database()
     
     # Start the polling thread
-    polling_thread = start_polling_thread()
+    # polling_thread = start_polling_thread()
     
     # Start the FastAPI app
-    uvicorn.run('app.main:app', host="127.0.0.1", port=8000, reload=False) 
+    uvicorn.run('app.main:app', host="127.0.0.1", port=8000, reload=True) 

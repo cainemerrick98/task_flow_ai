@@ -37,9 +37,18 @@ async def login(request: Request, db: Session = Depends(get_db)):
 
 @router.post('/register')
 async def register(request: Request, db: Session = Depends(get_db)):
+    print("register")
+    print(f"request: {request}")
+    print(f"request type: {type(request)}")
+    print(f"request body: {await request.body()}")
+    print(f"request headers: {request.headers}")
+    print(f"request url: {request.url}")
+    print(f"db: {db}")  
     data = await request.json()
+    print(f"data: {data}")
     email = data.get('email')
     password = data.get('password')
+    print(f"email: {email}, password: {password}")
     user = User(email=email, password=password)
     db.add(user)
     db.commit()
