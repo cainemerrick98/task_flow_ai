@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 import logging
 import uvicorn
 
-from app.api.routes import auth
+from app.api.routes import auth, integrations, tasks
 from app.services.gmail_polling import start_polling_thread
 from app.models import create_database
 
@@ -19,10 +19,8 @@ app = FastAPI()
 
 # Include routers
 app.include_router(auth.router, tags=["auth"])
-
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/auth/login")
+app.include_router(integrations.google_router, tags=["integrations"])
+app.include_router(tasks.router, tags=["tasks"])
 
 if __name__ == "__main__":
     # Create database

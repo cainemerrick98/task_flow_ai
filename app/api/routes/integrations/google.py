@@ -1,6 +1,6 @@
 from google_auth_oauthlib.flow import Flow
 from fastapi import Request, APIRouter, HTTPException, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import jwt
 import logging
@@ -8,7 +8,6 @@ from datetime import datetime
 
 from app.config import settings
 from app.models import User, GmailCredentials, get_db
-from app.auth.google import create_auth_flow, get_flow_and_credentials
 
 
 router = APIRouter()
@@ -74,8 +73,10 @@ async def callback(request: Request, db: Session = Depends(get_db)):
         # Create or update user
         user = db.query(User).filter(User.email == user_email).first()
         if not user:
-            user = User(email=user_email, is_active=True, is_google_authenticated=True)
-            db.add(user)
+            raise HTTPException(status_code=400, detail="User not found")
+        
+        if not user.is_google_authenticated:
+            user.is_google_authenticated = True
             db.commit()
 
         # Store credentials
@@ -88,12 +89,10 @@ async def callback(request: Request, db: Session = Depends(get_db)):
             ))
         db.commit()
         
-        return RedirectResponse(url="/auth/success")
+        return JSONResponse(status_code=200, content={"message": "Successfully authenticated with Gmail"})
 
     except Exception as e:
         logger.error(f"Auth callback error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
-@router.get("/auth/success")
-async def success():
-    return {"message": "Successfully authenticated with Gmail"}
+
